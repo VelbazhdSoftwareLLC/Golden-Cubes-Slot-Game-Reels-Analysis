@@ -1,1 +1,26 @@
-screens/
+# The information is generated during the calculation process.
+extraction/
+
+# Jupyter Notebook / JupyterLab
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+.virtual_documents/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Python Caches & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# Environment Variables / Secrets
+.env
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
