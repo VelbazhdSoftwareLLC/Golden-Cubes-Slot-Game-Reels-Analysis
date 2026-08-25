@@ -588,6 +588,8 @@ public class App {
     }
 
     private static void evaluate(Chromosome chromosome) {
+        //TODO Estimate the RTP of the chromosome using Monte Carlo simulation.
+
         Map<String, int[][]> symbolsApproximatedFrequency = new HashMap<>();
         for (int s = 0; s < SYMBOLS.length; s++) {
             symbolsApproximatedFrequency.put(SYMBOLS[s], new int[3][5]);
@@ -765,6 +767,7 @@ public class App {
             mutate(offspring);
             evaluate(offspring);
             population.add(offspring);
+            System.out.println("Candidate: " + c + " of " + NUMBER_OF_OPTIMIZATION_INDIVIDUALS + ", Fitness: " + offspring.fitness + ", RTP: " + offspring.rtp);
         }
 
         trim(population, POPULATION_SIZE);
