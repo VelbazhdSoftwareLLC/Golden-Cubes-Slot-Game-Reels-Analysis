@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,9 +31,11 @@ public class App {
 
     private static final int POPULATION_SIZE = 100;
 
-    private static final double MUTATION_RATE = 0.05;
+    private static final int OVERPOPULATION_THRESHOLD = 300;
 
-    private static final long NUMBER_OF_OPTIMIZATION_INDIVIDUALS = 100000L;
+    private static final double MUTATION_RATE = 0.1;
+
+    private static final long NUMBER_OF_OPTIMIZATION_INDIVIDUALS = 10000L;
 
     private static String[] RAW_CHUNKS_FREQUENCY = {
 		"fivefivefive,0,fivefivefive,4,fivefivefive,0,fivefivefive,1,fivefivefive,2",
@@ -569,8 +572,6 @@ public class App {
     }
 
     private static void random(List<Chromosome> population, int size) {
-        population.clear();
-
         for (int i = 0; i < size; i++) {
             Chromosome chromosome = new Chromosome();
 
@@ -721,7 +722,7 @@ public class App {
         }
 
         List<String> reel = offspring.reels.get(PRNG.nextInt(5));
-        switch(PRNG.nextInt(3)) {
+        switch(PRNG.nextInt(4)) {
             case 0:
                 if(reel.size() > 0) reel.remove(PRNG.nextInt(reel.size()));
                 break;
@@ -730,6 +731,9 @@ public class App {
                 break;
             case 2:
                 if(reel.size() > 0) reel.set(PRNG.nextInt(reel.size()), SYMBOLS[PRNG.nextInt(SYMBOLS.length)]);
+                break;
+            case 3:
+                Collections.shuffle(reel, PRNG);
                 break;
         }
     }
@@ -747,7 +751,6 @@ public class App {
     }
 
     private static void load(List<Chromosome> population, String string) throws IOException {
-        population.clear();
         String json = Files.readString(Path.of(string));
         population.addAll((new GsonBuilder().setPrettyPrinting().create()).fromJson(json, new TypeToken<List<Chromosome>>(){}.getType()));
     }
@@ -755,12 +758,14 @@ public class App {
     public static void main(String[] args) throws IOException {
         List<Chromosome> population = new ArrayList<>();
 
-        // random(population, POPULATION_SIZE);
-        // evaluate(population);
-        // save(population, "population.json");
-        // System.exit(0);
-
-        load(population, "population.json");
+        try {
+            population.clear();
+            load(population, "population.json");
+        } catch (IOException e) {
+            random(population, POPULATION_SIZE);
+            evaluate(population);
+            save(population, "population.json");
+        }
 
         for(int c=0; c<NUMBER_OF_OPTIMIZATION_INDIVIDUALS; c++) {
             Chromosome offspring = crossover(selection(population), selection(population));
@@ -768,6 +773,10 @@ public class App {
             evaluate(offspring);
             population.add(offspring);
             System.out.println("Candidate: " + c + " of " + NUMBER_OF_OPTIMIZATION_INDIVIDUALS + ", Fitness: " + offspring.fitness + ", RTP: " + offspring.rtp);
+
+            if(population.size() >= OVERPOPULATION_THRESHOLD) {
+                trim(population, POPULATION_SIZE);
+            }
         }
 
         trim(population, POPULATION_SIZE);
