@@ -624,7 +624,7 @@ public class App {
         /* Calculate fitness based on the difference between approximated and empirical frequencies. */
         double divisor = 1;
         chromosome.fitness = 0;
-        chromosome.fitness += (chromosome.rtp - RTP_TARGET) * (chromosome.rtp - RTP_TARGET);
+        chromosome.fitness += (100*chromosome.rtp - 100*RTP_TARGET) * (100*chromosome.rtp - 100*RTP_TARGET);
 
         for(String symbol : SYMBOLS) {
             int[][] empirical = symbolsFrequency.get(symbol);
