@@ -1,14 +1,22 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 public class App {
     private static final Random PRNG = ThreadLocalRandom.current();
 
-    private static final double RTP = 0.96;
+    private static final double RTP_TARGET = 0.96;
 
     private static final int REEL_SIZE = 139;
 
@@ -611,7 +619,55 @@ public class App {
             }
         }
 
-        //TODO: Calculate fitness based on the difference between approximated and empirical frequencies.
+        /* Calculate fitness based on the difference between approximated and empirical frequencies. */
+        double divisor = 1;
+        chromosome.fitness = 0;
+        chromosome.fitness += (chromosome.rtp - RTP_TARGET) * (chromosome.rtp - RTP_TARGET);
+
+        for(String symbol : SYMBOLS) {
+            int[][] empirical = symbolsFrequency.get(symbol);
+            int[][] approximated = symbolsApproximatedFrequency.get(symbol);
+            for(int r=0; r < 3; r++) {
+                for(int c=0; c < 5; c++) {
+                    chromosome.fitness += (approximated[r][c] - SAMPLES_RATIO*empirical[r][c]) * (approximated[r][c] - SAMPLES_RATIO*empirical[r][c]);
+                    divisor += 1;
+                }
+            }
+        }
+
+        for(int r=0; r < 5; r++) {
+            Map<String, Integer> empirical = chunksFrequency.get(r);
+            Map<String, Integer> approximated = chunksApproximatedFrequency.get(r);
+
+            Set<String> intersection = new HashSet<>(empirical.keySet());
+            intersection.retainAll(approximated.keySet());
+
+            for(String chunk : intersection) {
+                int empiricalValue = empirical.get(chunk);
+                int approximatedValue = approximated.get(chunk);
+                chromosome.fitness += (approximatedValue - SAMPLES_RATIO*empiricalValue) * (approximatedValue - SAMPLES_RATIO*empiricalValue);
+                divisor += 1;
+            }
+
+            Set<String> onlyInEmpirical = new HashSet<>(empirical.keySet());
+            onlyInEmpirical.removeAll(intersection); 
+            for(String chunk : onlyInEmpirical) {
+                int empiricalValue = empirical.get(chunk);
+                chromosome.fitness += (0 - SAMPLES_RATIO*empiricalValue) * (0 - SAMPLES_RATIO*empiricalValue);
+                divisor += 1;
+            }
+
+            Set<String> onlyInApproximated = new HashSet<>(approximated.keySet());
+            onlyInApproximated.removeAll(intersection);
+            for(String chunk : onlyInApproximated) {
+                int approximatedValue = approximated.get(chunk);
+                chromosome.fitness += (approximatedValue - SAMPLES_RATIO*0) * (approximatedValue - SAMPLES_RATIO*0);
+                divisor += 1;
+            }
+        }
+
+        /* Root Mean Squared Error (RMSE) */
+        chromosome.fitness = Math.sqrt(chromosome.fitness / divisor);
     }
 
     private static void evaluate(List<Chromosome> population) {
@@ -637,8 +693,24 @@ public class App {
     }
 
     private static Chromosome crossover(Chromosome first, Chromosome second) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'crossover'");
+        Chromosome offspring = new Chromosome();
+
+        for(int r=0; r < 5; r++) {
+            List<String> firstReel = first.reels.get(r);
+            List<String> secondReel = second.reels.get(r);
+            List<String> offspringReel = offspring.reels.get(r);
+
+            int length = Math.min(firstReel.size(), secondReel.size());
+            for(int o=0; o < length; o++) {
+                if(PRNG.nextBoolean()) {
+                    offspringReel.add(firstReel.get(o));
+                } else {
+                    offspringReel.add(secondReel.get(o));
+                }
+            }
+        }
+
+        return offspring;
     }
 
     private static void mutate(Chromosome offspring) {
@@ -660,11 +732,33 @@ public class App {
         }
     }
 
-    public static void main(String[] args) {
+    private static void trim(List<Chromosome> population, int size) {
+        population.sort(Comparator.comparingDouble(c -> c.fitness));
+        while(population.size() > size) {
+            population.remove(population.size() - 1);
+        }
+    }
+
+    private static void save(List<Chromosome> population, String filename) throws IOException {
+        String json = (new GsonBuilder().setPrettyPrinting().create()).toJson(population);
+        Files.writeString(Path.of(filename), json);
+    }
+
+    private static void load(List<Chromosome> population, String string) throws IOException {
+        population.clear();
+        String json = Files.readString(Path.of(string));
+        population.addAll((new GsonBuilder().setPrettyPrinting().create()).fromJson(json, new TypeToken<List<Chromosome>>(){}.getType()));
+    }
+
+    public static void main(String[] args) throws IOException {
         List<Chromosome> population = new ArrayList<>();
 
-        random(population, POPULATION_SIZE);
-        evaluate(population);
+        // random(population, POPULATION_SIZE);
+        // evaluate(population);
+        // save(population, "population.json");
+        // System.exit(0);
+
+        load(population, "population.json");
 
         for(int c=0; c<NUMBER_OF_OPTIMIZATION_INDIVIDUALS; c++) {
             Chromosome offspring = crossover(selection(population), selection(population));
@@ -672,5 +766,8 @@ public class App {
             evaluate(offspring);
             population.add(offspring);
         }
+
+        trim(population, POPULATION_SIZE);
+        save(population, "population.json");
     }
 }
