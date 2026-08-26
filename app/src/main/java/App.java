@@ -21,17 +21,17 @@ public class App {
 
     private static final int SAMPLE_SIZE = 1000;
 
-    private static final int APPROXIMATION_SIZE = 100000;
+    private static final int APPROXIMATION_SIZE = 10000;
 
     private static final int SAMPLES_RATIO = APPROXIMATION_SIZE / SAMPLE_SIZE;
 
-    private static final int POPULATION_SIZE = 10;
+    private static final int POPULATION_SIZE = 30;
 
-    private static final int OVERPOPULATION_THRESHOLD = 30;
+    private static final int OVERPOPULATION_THRESHOLD = 90;
 
     private static final double MUTATION_RATE = 0.1;
 
-    private static final long NUMBER_OF_OPTIMIZATION_INDIVIDUALS = 10000L;
+    private static final long NUMBER_OF_OPTIMIZATION_INDIVIDUALS = 1000L;
 
     private static String[] RAW_CHUNKS_FREQUENCY = {
 		"fivefivefive,0,fivefivefive,4,fivefivefive,0,fivefivefive,1,fivefivefive,2",
@@ -634,7 +634,7 @@ public class App {
         /* Calculate fitness based on the difference between approximated and empirical frequencies. */
         double divisor = 1;
         chromosome.fitness = 0;
-        chromosome.fitness += 100000 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
+        chromosome.fitness += 1_000_000 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
 
         for(String symbol : GoldenCubes.Model.SYMBOLS) {
             int[][] empirical = symbolsFrequency.get(symbol);
@@ -747,11 +747,12 @@ public class App {
         }
     }
 
-    private static void trim(List<Chromosome> population, int size) {
+    private static void trim(List<Chromosome> elite, List<Chromosome> population, int size) {
         population.sort(Comparator.comparingDouble(c -> c.fitness));
         while(population.size() > size) {
             population.remove(population.size() - 1);
         }
+		elite.add(population.get(0));
     }
 
     private static void save(List<Chromosome> population, String filename) throws IOException {
@@ -765,17 +766,24 @@ public class App {
     }
 
     public static void main(String[] args) throws IOException {
+		List<Chromosome> elite = new ArrayList<>();
         List<Chromosome> population = new ArrayList<>();
+
+        try {
+            elite.clear();
+            load(elite, "elite.json");
+        } catch (IOException e) {
+		}
 
         try {
             population.clear();
             load(population, "population.json");
         } catch (IOException e) {
             random(population, POPULATION_SIZE);
-            evaluate(population);
             save(population, "population.json");
         }
 
+        evaluate(population);
         for(int c=0; c<NUMBER_OF_OPTIMIZATION_INDIVIDUALS; c++) {
             Chromosome offspring = crossover(selection(population), selection(population));
             mutate(offspring);
@@ -784,11 +792,12 @@ public class App {
             System.out.println("Candidate: " + c + " of " + NUMBER_OF_OPTIMIZATION_INDIVIDUALS + ", Fitness: " + offspring.fitness + ", RTP: " + offspring.rtp);
 
             if(population.size() >= OVERPOPULATION_THRESHOLD) {
-                trim(population, POPULATION_SIZE);
+                trim(elite, population, POPULATION_SIZE);
             }
         }
 
-        trim(population, POPULATION_SIZE);
+        trim(elite, population, POPULATION_SIZE);
         save(population, "population.json");
+		save(elite, "elite.json");
     }
 }
