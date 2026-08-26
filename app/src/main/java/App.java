@@ -17,11 +17,7 @@ import com.google.gson.reflect.TypeToken;
 public class App {
     private static final Random PRNG = ThreadLocalRandom.current();
 
-    private static final double RTP_TARGET = 0.96;
-
     private static final int REEL_SIZE = 139;
-
-    private static final String[] SYMBOLS = {"star", "roku", "one", "two", "three", "four", "five", "six"};
 
     private static final int SAMPLE_SIZE = 1000;
 
@@ -29,7 +25,7 @@ public class App {
 
     private static final int SAMPLES_RATIO = APPROXIMATION_SIZE / SAMPLE_SIZE;
 
-    private static final int POPULATION_SIZE = 100;
+    private static final int POPULATION_SIZE = 10;
 
     private static final int OVERPOPULATION_THRESHOLD = 300;
 
@@ -530,8 +526,8 @@ public class App {
     private static List<List<String>> symbolsEmpiricalDistribution = new ArrayList<>(5);
 
     static {
-        for (int i = 0; i < SYMBOLS.length; i++) {
-            symbolsFrequency.put(SYMBOLS[i], RAW_SYMBOLS_FREQUENCY[i]);
+        for (int i = 0; i < GoldenCubes.Model.SYMBOLS.length; i++) {
+            symbolsFrequency.put(GoldenCubes.Model.SYMBOLS[i], RAW_SYMBOLS_FREQUENCY[i]);
         }
 
         for (int i = 0; i < 5; i++) {
@@ -561,7 +557,7 @@ public class App {
 
         for(int i = 0; i < 5; i++) {
             List<String> reel = symbolsEmpiricalDistribution.get(i);
-            for(String symbol : SYMBOLS) {
+            for(String symbol : GoldenCubes.Model.SYMBOLS) {
                 for(int j = 0; j < 3; j++) {
                     for(int n=0; n < symbolsFrequency.get(symbol)[j][i]; n++) {
                         reel.add(symbol);
@@ -588,12 +584,24 @@ public class App {
         }
     }
 
-    private static void evaluate(Chromosome chromosome) {
-        //TODO Estimate the RTP of the chromosome using Monte Carlo simulation.
+    private static double simulate(List<List<String>> reels, int numberOfBaseGameSpins) {
+		GoldenCubes game = new GoldenCubes();
+		game.model.baseReels = reels;
+		game.statistics.numberOfBaseGameSpins = numberOfBaseGameSpins;
 
+		game.simulate();
+
+		return game.statistics.wonMoney / game.statistics.lostMoney;
+	}
+
+    private static void evaluate(Chromosome chromosome) {
+        /* Estimate the RTP of the chromosome using Monte Carlo simulation. */
+		chromosome.rtp = simulate(chromosome.reels, 1_000_000);
+
+		/* Calculate the approximated frequency of each symbol on each reel. */
         Map<String, int[][]> symbolsApproximatedFrequency = new HashMap<>();
-        for (int s = 0; s < SYMBOLS.length; s++) {
-            symbolsApproximatedFrequency.put(SYMBOLS[s], new int[3][5]);
+        for (int s = 0; s < GoldenCubes.Model.SYMBOLS.length; s++) {
+            symbolsApproximatedFrequency.put(GoldenCubes.Model.SYMBOLS[s], new int[3][5]);
         }
 
         List<Map<String, Integer>> chunksApproximatedFrequency = new ArrayList<>(5);
@@ -625,9 +633,9 @@ public class App {
         /* Calculate fitness based on the difference between approximated and empirical frequencies. */
         double divisor = 1;
         chromosome.fitness = 0;
-        chromosome.fitness += (100*chromosome.rtp - 100*RTP_TARGET) * (100*chromosome.rtp - 100*RTP_TARGET);
+        chromosome.fitness += 100 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
 
-        for(String symbol : SYMBOLS) {
+        for(String symbol : GoldenCubes.Model.SYMBOLS) {
             int[][] empirical = symbolsFrequency.get(symbol);
             int[][] approximated = symbolsApproximatedFrequency.get(symbol);
             for(int r=0; r < 3; r++) {
@@ -673,7 +681,7 @@ public class App {
         chromosome.fitness = Math.sqrt(chromosome.fitness / divisor);
     }
 
-    private static void evaluate(List<Chromosome> population) {
+	private static void evaluate(List<Chromosome> population) {
         for (Chromosome chromosome : population) {
             evaluate(chromosome);
         }
@@ -727,10 +735,10 @@ public class App {
                 if(reel.size() > 0) reel.remove(PRNG.nextInt(reel.size()));
                 break;
             case 1:
-                reel.add(PRNG.nextInt(reel.size()), SYMBOLS[PRNG.nextInt(SYMBOLS.length)]);
+                reel.add(PRNG.nextInt(reel.size()), GoldenCubes.Model.SYMBOLS[PRNG.nextInt(GoldenCubes.Model.SYMBOLS.length)]);
                 break;
             case 2:
-                if(reel.size() > 0) reel.set(PRNG.nextInt(reel.size()), SYMBOLS[PRNG.nextInt(SYMBOLS.length)]);
+                if(reel.size() > 0) reel.set(PRNG.nextInt(reel.size()), GoldenCubes.Model.SYMBOLS[PRNG.nextInt(GoldenCubes.Model.SYMBOLS.length)]);
                 break;
             case 3:
                 Collections.shuffle(reel, PRNG);
