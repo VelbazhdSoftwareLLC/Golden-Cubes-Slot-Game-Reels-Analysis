@@ -27,7 +27,7 @@ public class App {
 
     private static final int POPULATION_SIZE = 10;
 
-    private static final int OVERPOPULATION_THRESHOLD = 300;
+    private static final int OVERPOPULATION_THRESHOLD = 30;
 
     private static final double MUTATION_RATE = 0.1;
 
@@ -575,9 +575,10 @@ public class App {
                 List<String> reel = chromosome.reels.get(r);
                 List<String> distribution = symbolsEmpiricalDistribution.get(r);
 
-                for(int s = 0; s < REEL_SIZE; s++) {
-                    reel.add(distribution.get(PRNG.nextInt(distribution.size())));
-                }
+				reel.clear();
+				while(reel.size() < REEL_SIZE) {
+					reel.add(distribution.get(PRNG.nextInt(distribution.size())));
+				}
             }
 
             population.add(chromosome);
@@ -591,7 +592,7 @@ public class App {
 
 		game.simulate();
 
-		return game.statistics.wonMoney / game.statistics.lostMoney;
+		return (double) game.statistics.wonMoney / (double) game.statistics.lostMoney;
 	}
 
     private static void evaluate(Chromosome chromosome) {
@@ -633,7 +634,7 @@ public class App {
         /* Calculate fitness based on the difference between approximated and empirical frequencies. */
         double divisor = 1;
         chromosome.fitness = 0;
-        chromosome.fitness += 100 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
+        chromosome.fitness += 100000 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
 
         for(String symbol : GoldenCubes.Model.SYMBOLS) {
             int[][] empirical = symbolsFrequency.get(symbol);

@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,8 @@ public class GoldenCubes {
 		};
 
         public static final String[] SYMBOLS = {"star", "roku", "one", "two", "three", "four", "five", "six"};
+
+		public boolean valid = true;
 
 		public List<List<String>> baseReels = new ArrayList<>();
 
@@ -92,6 +95,11 @@ public class GoldenCubes {
 			}
 		}
 
+		if (count > 5) {
+			model.valid = false;
+			count = 5;
+		}
+
         return model.payTable.get("star").get(count);
     }
 
@@ -156,6 +164,13 @@ public class GoldenCubes {
 			statistics.lostMoney += model.LINES.length;
 
 			singleBaseGame(view);
+
+			if(model.valid == false) {
+				statistics.totalNumberOfGames = 0;
+				statistics.wonMoney = 100;
+				statistics.lostMoney = 1;
+				break;
+			}
 		}
 	}
 
