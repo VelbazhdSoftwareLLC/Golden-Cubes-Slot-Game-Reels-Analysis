@@ -6,7 +6,7 @@ public class Chromosome {
 
     double fitness = Double.MAX_VALUE;
 
-    List<List<String>> reels = new ArrayList<>();
+    List<List<GoldenCubes.Symbol>> reels = new ArrayList<>();
 
     Chromosome() {
         for(int i=0; i<5; i++) {

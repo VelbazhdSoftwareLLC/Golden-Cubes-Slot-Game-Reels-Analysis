@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +6,44 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class GoldenCubes {
+	public static enum Symbol{
+		STAR(0, "star"),
+		ROKU(1, "roku"),
+		ONE(2, "one"),
+		TWO(3, "two"),
+		THREE(4, "three"),
+		FOUR(5, "four"),
+		FIVE(6, "five"),
+		SIX(7, "six");
+
+		private static final Random PRNG = ThreadLocalRandom.current();
+
+		private final int index;
+		private final String caption;
+
+		public static Symbol random() {
+			return values()[PRNG.nextInt(values().length)];
+		}
+
+		private Symbol(int index, String caption) {
+			this.index = index;
+			this.caption = caption;
+		}
+
+		public int index() {
+			return index;
+		}
+
+		public String caption() {
+			return caption;
+		}
+
+		@Override
+		public String toString() {
+			return caption;
+		}
+	}
+
     public static final double RTP_TARGET = 0.96;
 
 	public class Model {
@@ -19,13 +56,11 @@ public class GoldenCubes {
 			{50,1000,100,100,40,40,40,40,},
 		};
 
-        public static final String[] SYMBOLS = {"star", "roku", "one", "two", "three", "four", "five", "six"};
-
 		public boolean valid = true;
 
-		public List<List<String>> baseReels = new ArrayList<>();
+		public List<List<Symbol>> baseReels = new ArrayList<>();
 
-        public Map<String, List<Integer>> payTable = new HashMap<>();
+        public Map<Symbol, List<Integer>> payTable = new HashMap<>();
 
 		private static final int[][] LINES = {
 			{1,1,1,1,1,},
@@ -40,12 +75,13 @@ public class GoldenCubes {
                 baseReels.add(new ArrayList<>());
             }
 
-            for (int i = 0; i < SYMBOLS.length; i++) {
+			Symbol[] symbols = Symbol.values();
+            for (int i = 0; i < symbols.length; i++) {
                 List<Integer> payouts = new ArrayList<>();
                 for (int count = 0; count < PRIZES.length; count++) {
                     payouts.add(PRIZES[count][i]);
                 }
-                payTable.put(SYMBOLS[i], payouts);
+                payTable.put(symbols[i], payouts);
             }
         }
 	}
@@ -65,7 +101,7 @@ public class GoldenCubes {
     public Model model = new Model();
 	public Statistics statistics = new Statistics();
 
-	private void spin(List<List<String>> reels, String[][] view) {
+	private void spin(List<List<Symbol>> reels, Symbol[][] view) {
 		for (int i = 0; i < view.length && i < reels.size(); i++) {
 			int r = PRNG.nextInt(reels.get(i).size());
 			int u = r - 1;
@@ -85,11 +121,11 @@ public class GoldenCubes {
 		}
     }
 
-   	private int scatterWin(String[][] view) {
+   	private int scatterWin(Symbol[][] view) {
 		int count = 0;
 		for (int j = 0; j < 3; j++) {
 			for (int i = 0; i < 5; i++) {
-				if (view[i][j].equals("star")) {
+				if (view[i][j] == Symbol.STAR) {
 					count++;
 				}
 			}
@@ -100,20 +136,20 @@ public class GoldenCubes {
 			count = 5;
 		}
 
-        return model.payTable.get("star").get(count);
+        return model.payTable.get(Symbol.STAR).get(count);
     }
 
-   	private int lineWin(String[] line) {
-		String symbol = line[0];
+   	private int lineWin(Symbol[] line) {
+		Symbol symbol = line[0];
 
         /* Scatter does not form line win. */
-        if(symbol.equals("star")) {
+        if(symbol == Symbol.STAR) {
             return 0;
         }
 
 		int count = 0;
 		for (int i = 0; i < line.length; i++) {
-			if (line[i].equals(symbol)) {
+			if (line[i] == symbol) {
 				count++;
 			} else {
 				break;
@@ -123,9 +159,9 @@ public class GoldenCubes {
 		return model.payTable.get(symbol).get(count);
 	}
 
-    private int linesWin(String[][] view) {
+    private int linesWin(Symbol[][] view) {
 		int win = 0;
-		String[] line = { null, null, null, null, null };
+		Symbol[] line = { null, null, null, null, null };
 		for (int l = 0; l < model.LINES.length; l++) {
 			for (int i = 0; i < line.length; i++) {
 				int index = model.LINES[l][i];
@@ -137,7 +173,7 @@ public class GoldenCubes {
 		return win;
 	}
 
-	private void singleBaseGame(String[][] view) {
+	private void singleBaseGame(Symbol[][] view) {
 		spin(model.baseReels, view);
 
 		int win = scatterWin(view) + linesWin(view);
@@ -151,7 +187,7 @@ public class GoldenCubes {
 	}
 
     public void simulate() {
-		String[][] view = {
+		Symbol[][] view = {
 			{ null, null, null },
 			{ null, null, null },
 			{ null, null, null },

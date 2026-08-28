@@ -519,15 +519,16 @@ public class App {
         }
     };
 
-    private static Map<String, int[][]> symbolsFrequency = new HashMap<>();
+    private static Map<GoldenCubes.Symbol, int[][]> symbolsFrequency = new HashMap<>();
 
     private static List<Map<String, Integer>> chunksFrequency = new ArrayList<>(5);
 
-    private static List<List<String>> symbolsEmpiricalDistribution = new ArrayList<>(5);
+    private static List<List<GoldenCubes.Symbol>> symbolsEmpiricalDistribution = new ArrayList<>(5);
 
     static {
-        for (int i = 0; i < GoldenCubes.Model.SYMBOLS.length; i++) {
-            symbolsFrequency.put(GoldenCubes.Model.SYMBOLS[i], RAW_SYMBOLS_FREQUENCY[i]);
+		GoldenCubes.Symbol[] symbols = GoldenCubes.Symbol.values();
+        for (int i = 0; i < symbols.length; i++) {
+            symbolsFrequency.put(symbols[i], RAW_SYMBOLS_FREQUENCY[i]);
         }
 
         for (int i = 0; i < 5; i++) {
@@ -556,8 +557,8 @@ public class App {
         }
 
         for(int i = 0; i < 5; i++) {
-            List<String> reel = symbolsEmpiricalDistribution.get(i);
-            for(String symbol : GoldenCubes.Model.SYMBOLS) {
+            List<GoldenCubes.Symbol> reel = symbolsEmpiricalDistribution.get(i);
+            for(GoldenCubes.Symbol symbol : GoldenCubes.Symbol.values()) {
                 for(int j = 0; j < 3; j++) {
                     for(int n=0; n < symbolsFrequency.get(symbol)[j][i]; n++) {
                         reel.add(symbol);
@@ -572,8 +573,8 @@ public class App {
             Chromosome chromosome = new Chromosome();
 
             for(int r = 0; r < chromosome.reels.size(); r++) {
-                List<String> reel = chromosome.reels.get(r);
-                List<String> distribution = symbolsEmpiricalDistribution.get(r);
+                List<GoldenCubes.Symbol> reel = chromosome.reels.get(r);
+                List<GoldenCubes.Symbol> distribution = symbolsEmpiricalDistribution.get(r);
 
 				reel.clear();
 				while(reel.size() < REEL_SIZE) {
@@ -585,7 +586,7 @@ public class App {
         }
     }
 
-    private static double simulate(List<List<String>> reels, int numberOfBaseGameSpins) {
+    private static double simulate(List<List<GoldenCubes.Symbol>> reels, int numberOfBaseGameSpins) {
 		GoldenCubes game = new GoldenCubes();
 		game.model.baseReels = reels;
 		game.statistics.numberOfBaseGameSpins = numberOfBaseGameSpins;
@@ -600,9 +601,10 @@ public class App {
 		chromosome.rtp = simulate(chromosome.reels, 1_000_000);
 
 		/* Calculate the approximated frequency of each symbol on each reel. */
-        Map<String, int[][]> symbolsApproximatedFrequency = new HashMap<>();
-        for (int s = 0; s < GoldenCubes.Model.SYMBOLS.length; s++) {
-            symbolsApproximatedFrequency.put(GoldenCubes.Model.SYMBOLS[s], new int[3][5]);
+		GoldenCubes.Symbol[] symbols = GoldenCubes.Symbol.values();
+        Map<GoldenCubes.Symbol, int[][]> symbolsApproximatedFrequency = new HashMap<>();
+        for (int s = 0; s < symbols.length; s++) {
+            symbolsApproximatedFrequency.put(symbols[s], new int[3][5]);
         }
 
         List<Map<String, Integer>> chunksApproximatedFrequency = new ArrayList<>(5);
@@ -610,23 +612,23 @@ public class App {
             chunksApproximatedFrequency.add(new HashMap<>());
         }
 
-        String[][] screen = {
-            {"", "", "", "", ""},
-            {"", "", "", "", ""},
-            {"", "", "", "", ""},
+        GoldenCubes.Symbol[][] screen = {
+            {null, null, null, null, null},
+            {null, null, null, null, null},
+            {null, null, null, null, null},
         };
 
         for(int g=0; g < APPROXIMATION_SIZE; g++) {
             for(int r=0; r < 5; r++) {
-                List<String> reel = chromosome.reels.get(r);
+                List<GoldenCubes.Symbol> reel = chromosome.reels.get(r);
                 int start = PRNG.nextInt(reel.size());
 
                 for(int s=0; s < 3; s++) {
-                    String symbol = screen[s][r] = reel.get((start + s) % reel.size());
+                    GoldenCubes.Symbol symbol = screen[s][r] = reel.get((start + s) % reel.size());
                     symbolsApproximatedFrequency.get(symbol)[s][r]++;
                 }
 
-                String chunk = screen[0][r] + screen[1][r] + screen[2][r];
+                String chunk = screen[0][r].caption() + screen[1][r].caption() + screen[2][r].caption();
                 chunksApproximatedFrequency.get(r).put(chunk, chunksApproximatedFrequency.get(r).getOrDefault(chunk, 0) + 1);
             }
         }
@@ -636,7 +638,7 @@ public class App {
         chromosome.fitness = 0;
         chromosome.fitness += 1_000_000 * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET) * (100*chromosome.rtp - 100*GoldenCubes.RTP_TARGET);
 
-        for(String symbol : GoldenCubes.Model.SYMBOLS) {
+        for(GoldenCubes.Symbol symbol : GoldenCubes.Symbol.values()) {
             int[][] empirical = symbolsFrequency.get(symbol);
             int[][] approximated = symbolsApproximatedFrequency.get(symbol);
             for(int r=0; r < 3; r++) {
@@ -708,9 +710,9 @@ public class App {
         Chromosome offspring = new Chromosome();
 
         for(int r=0; r < 5; r++) {
-            List<String> firstReel = first.reels.get(r);
-            List<String> secondReel = second.reels.get(r);
-            List<String> offspringReel = offspring.reels.get(r);
+            List<GoldenCubes.Symbol> firstReel = first.reels.get(r);
+            List<GoldenCubes.Symbol> secondReel = second.reels.get(r);
+            List<GoldenCubes.Symbol> offspringReel = offspring.reels.get(r);
 
             int length = Math.min(firstReel.size(), secondReel.size());
             for(int o=0; o < length; o++) {
@@ -730,16 +732,16 @@ public class App {
             return;
         }
 
-        List<String> reel = offspring.reels.get(PRNG.nextInt(5));
+        List<GoldenCubes.Symbol> reel = offspring.reels.get(PRNG.nextInt(5));
         switch(PRNG.nextInt(4)) {
             case 0:
                 if(reel.size() > 0) reel.remove(PRNG.nextInt(reel.size()));
                 break;
             case 1:
-                reel.add(PRNG.nextInt(reel.size()), GoldenCubes.Model.SYMBOLS[PRNG.nextInt(GoldenCubes.Model.SYMBOLS.length)]);
+                reel.add(PRNG.nextInt(reel.size()), GoldenCubes.Symbol.random());
                 break;
             case 2:
-                if(reel.size() > 0) reel.set(PRNG.nextInt(reel.size()), GoldenCubes.Model.SYMBOLS[PRNG.nextInt(GoldenCubes.Model.SYMBOLS.length)]);
+                if(reel.size() > 0) reel.set(PRNG.nextInt(reel.size()), GoldenCubes.Symbol.random());
                 break;
             case 3:
                 Collections.shuffle(reel, PRNG);
