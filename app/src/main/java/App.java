@@ -626,7 +626,7 @@ public class App {
                     symbolsApproximatedFrequency.get(symbol)[s][r]++;
                 }
 
-                String chunk = String.join("", screen[0][r], screen[1][r], screen[2][r]);
+                String chunk = screen[0][r] + screen[1][r] + screen[2][r];
                 chunksApproximatedFrequency.get(r).put(chunk, chunksApproximatedFrequency.get(r).getOrDefault(chunk, 0) + 1);
             }
         }
